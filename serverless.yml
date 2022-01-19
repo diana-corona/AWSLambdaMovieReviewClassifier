@@ -1,0 +1,58 @@
+service: serverless-sentiment-analysis-movies  ##name of the service
+
+configValidationMode: error
+
+plugins:
+  - serverless-python-requirements
+provider:
+  name: aws
+  runtime: python3.7 ##python version
+  region: us-east-1 ##region of s3 bucket with model 
+  lambdaHashingVersion: 20201221
+
+  deploymentBucket:
+    name: serverless-sentiment-analysis-movies ## name of s3 bucket with model 
+
+  iamRoleStatements: ## allow role to read from s3 
+    - Effect: Allow
+      Action: 
+        - s3:GetObject
+      Resource:
+        - "arn:aws:s3:::serverless-sentiment-analysis-movies/*"  ## name of s3 bucket with model 
+  
+
+custom:
+  pythonRequirements:
+    pythonBin: python3
+    slim: true
+    layer: true ## add requirements as layer
+    useDownloadCache: true 
+    useStaticCache: true
+    noDeploy:
+      - pytest
+
+functions:
+  classify_review_lambda:
+    name:  classify_review_lambda ## aws lambda function
+    description: serverless sentiment-analysis-movies lambda
+    handler: main.lambda_handler ## file with lambda_handler function
+    layers:
+      - Ref: PythonRequirementsLambdaLayer ## add requirements as layer
+      - arn:aws:lambda:us-east-1:446751924810:layer:python-3-7-scikit-learn-0-22-0:3 ## add sklearn as layer
+    events:  
+      - http: 
+          path:  /sgdclassifiers
+          method: GET
+          cors: true
+          authorizer:
+            arn: arn:aws:lambda:us-east-1:086948990359:function:sentiment-analysis-authorizer-lambda  ## aws lambda authorizer function
+            resultTtlInSeconds: 0
+            identitySource: method.request.header.Authorization
+            identityValidationExpression: .*
+            type: token
+  
+     
+
+
+
+
